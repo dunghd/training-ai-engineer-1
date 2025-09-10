@@ -33,7 +33,13 @@ def make_s3_client():
     return boto3.client('s3', **kwargs)
 
 
-s3 = make_s3_client()
+_s3_client = None
+
+def get_s3_client():
+    global _s3_client
+    if _s3_client is None:
+        _s3_client = make_s3_client()
+    return _s3_client
 
 
 def csv_to_records(content: bytes):
@@ -69,6 +75,7 @@ def lambda_handler(event, context):
                 f"Ensure the event or RAW_BUCKET env var is set when testing locally."
             )
         try:
+            s3 = get_s3_client()
             obj = s3.get_object(Bucket=s3_bucket, Key=s3_key)
         except NoCredentialsError:
             raise RuntimeError(

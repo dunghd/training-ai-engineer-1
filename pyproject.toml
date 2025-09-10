@@ -10,6 +10,7 @@ python = "^3.11"
 boto3 = "1.28.0"
 requests = "2.31.0"
 opensearch-py = "2.0.0"
+python-dotenv = "^1.0.0"
 numpy = {version = "^1.25", optional = true}
 pandas = {version = "^2.1", optional = true}
 
