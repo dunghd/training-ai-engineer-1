@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM template for S3-triggered Lambda that indexes into OpenSearch
+
+Globals:
+  Function:
+    Runtime: python3.11
+    Timeout: 30
+
+Resources:
+  RawBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${AWS::StackName}-raw-bucket'
+
+  ProcessedBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${AWS::StackName}-processed-bucket'
+
+  IndexerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: src/lambda_function.lambda_handler
+      Policies:
+        - S3ReadPolicy: {}
+        - S3CrudPolicy: {}
+      Events:
+        S3Upload:
+          Type: S3
+          Properties:
+            Bucket: !Ref RawBucket
+            Events: s3:ObjectCreated:*
+      Environment:
+        Variables:
+          OPENSEARCH_ENDPOINT: ''
+          INDEX_NAME: records
+          PROCESSED_BUCKET: !Ref ProcessedBucket
+
+Outputs:
+  RawBucketName:
+    Value: !Ref RawBucket
+  ProcessedBucketName:
+    Value: !Ref ProcessedBucket
