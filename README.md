@@ -99,6 +99,27 @@ pip install -r requirements.txt
 1. Upload a sample CSV to the raw bucket with the included CLI (it will fetch a public CSV and upload to MinIO):
 
 ```bash
+# Option 1: COVID-19 Global Data (~200K records)
+python src/ingest_raw.py \
+    --bucket "$RAW_BUCKET" \
+    --key covid_global.csv \
+    --url "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv" \
+    --s3-endpoint "$S3_ENDPOINT" \
+    --s3-access-key "$S3_ACCESS_KEY" \
+    --s3-secret-key "$S3_SECRET_KEY" \
+    --s3-use-ssl false
+
+# Option 2: S&P 500 Companies Data (smaller but structured)
+python src/ingest_raw.py \
+    --bucket "$RAW_BUCKET" \
+    --key sp500_companies.csv \
+    --url "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv" \
+    --s3-endpoint "$S3_ENDPOINT" \
+    --s3-access-key "$S3_ACCESS_KEY" \
+    --s3-secret-key "$S3_SECRET_KEY" \
+    --s3-use-ssl false
+
+# Option 3: Original small dataset for testing
 python src/ingest_raw.py \
 	--bucket "$RAW_BUCKET" \
 	--key sample.csv \

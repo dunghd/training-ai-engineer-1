@@ -43,15 +43,57 @@ def get_s3_client():
 
 
 def csv_to_records(content: bytes):
+    # Configurable safety: if CSV contains more than CSV_FIELD_LIMIT columns
+    # we either 'collapse' the extra columns into a single `extra_columns` dict
+    # field per-record, or 'prune' them (drop). Set via env vars:
+    #   CSV_FIELD_LIMIT (int, default 1000)
+    #   CSV_OVERFLOW_STRATEGY ('collapse' or 'prune', default 'collapse')
+    limit = int(os.environ.get('CSV_FIELD_LIMIT', '1000'))
+    strategy = os.environ.get('CSV_OVERFLOW_STRATEGY', 'collapse').lower()
+
     if USE_PANDAS:
         # Use pandas for robust parsing and NaN handling
         df = pd.read_csv(BytesIO(content))
         df = df.replace({np.nan: None})
-        return df.to_dict(orient='records')
+        cols = list(df.columns)
+        if len(cols) > limit:
+            print(f'CSV has {len(cols)} columns, exceeding limit {limit}. Using strategy={strategy}')
+            keep = cols[:limit]
+            extra = cols[limit:]
+            if strategy == 'prune':
+                df = df[keep]
+                return df.to_dict(orient='records')
+            # collapse: produce records where extra columns are nested under 'extra_columns'
+            records = []
+            for _, row in df.iterrows():
+                base = {k: row[k] for k in keep}
+                extras = {k: row[k] for k in extra if row[k] is not None}
+                base['extra_columns'] = extras or None
+                records.append(base)
+            return records
+
     # Fallback to stdlib csv
     text = content.decode('utf-8')
     reader = csv.DictReader(StringIO(text))
     records = []
+    header = reader.fieldnames or []
+    if header and len(header) > limit:
+        print(f'CSV has {len(header)} columns, exceeding limit {limit}. Using strategy={strategy}')
+        allowed = header[:limit]
+        extra_cols = header[limit:]
+        if strategy == 'prune':
+            for row in reader:
+                cleaned = {k: (v if v != '' else None) for k, v in row.items() if k in allowed}
+                records.append(cleaned)
+            return records
+        # collapse
+        for row in reader:
+            base = {k: (v if v != '' else None) for k, v in row.items() if k in allowed}
+            extras = {k: v for k, v in row.items() if k in extra_cols and v != ''}
+            base['extra_columns'] = extras or None
+            records.append(base)
+        return records
+
     for row in reader:
         cleaned = {k: (v if v != '' else None) for k, v in row.items()}
         records.append(cleaned)
